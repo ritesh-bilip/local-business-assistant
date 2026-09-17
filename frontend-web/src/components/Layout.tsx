@@ -11,6 +11,7 @@ const navLink = ({ isActive }: { isActive: boolean }) =>
 export default function Layout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+
   const handleLogout = () => {
     logout();
     navigate("/login", { replace: true });
@@ -18,7 +19,7 @@ export default function Layout() {
 
   return (
     <div className="min-h-screen bg-[#f6f8fc] text-slate-900">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(59,130,246,0.08),transparent_24%),radial-gradient(circle_at_80%_0%,rgba(14,165,233,0.06),transparent_28%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(59,130,246,0.08),transparent_24%),radial-gradient(circle_at_80%_0%,rgba(14,165,233,0.06),transparent_28%)]" />
 
       <header className="sticky top-0 z-10 border-b border-slate-200/80 bg-white/85 shadow-sm backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3">
@@ -42,7 +43,10 @@ export default function Layout() {
               Ask
             </NavLink>
             <NavLink to="/proposal" className={navLink}>
-              Proposals
+              New proposal
+            </NavLink>
+            <NavLink to="/proposals" className={navLink}>
+              Saved
             </NavLink>
             <NavLink to="/history" className={navLink}>
               History

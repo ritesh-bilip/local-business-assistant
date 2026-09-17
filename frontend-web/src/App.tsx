@@ -9,6 +9,8 @@ import Dashboard from "./pages/Dashboard";
 import Documents from "./pages/Documents";
 import QA from "./pages/QA";
 import Proposal from "./pages/Proposal";
+import Proposals from "./pages/Proposals";
+import ProposalDetail from "./pages/ProposalDetail";
 import History from "./pages/History";
 
 export default function App() {
@@ -16,10 +18,12 @@ export default function App() {
     <AuthProvider>
       <BrowserRouter>
         <Routes>
+          {/* Public */}
           <Route path="/" element={<Landing />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
 
+          {/* Protected */}
           <Route
             element={
               <ProtectedRoute>
@@ -31,6 +35,8 @@ export default function App() {
             <Route path="/documents" element={<Documents />} />
             <Route path="/qa" element={<QA />} />
             <Route path="/proposal" element={<Proposal />} />
+            <Route path="/proposals" element={<Proposals />} />
+            <Route path="/proposals/:id" element={<ProposalDetail />} />
             <Route path="/history" element={<History />} />
           </Route>
 
