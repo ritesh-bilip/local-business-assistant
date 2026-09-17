@@ -1,0 +1,33 @@
+# ===== Backend =====
+backend/venv/
+backend/__pycache__/
+backend/**/__pycache__/
+backend/*.pyc
+backend/*.pyo
+backend/*.pyd
+backend/.pytest_cache/
+backend/.env
+backend/.env.*
+backend/data/
+backend/staticfiles/
+backend/media/
+backend/.git/
+
+# ===== Frontend =====
+frontend-web/node_modules/
+frontend-web/dist/
+frontend-web/.vite/
+frontend-web/.env
+frontend-web/.env.*
+frontend-web/.git/
+
+# ===== Root =====
+.git/
+.gitignore
+.env
+.env.docker
+.env.*
+**/.DS_Store
+**/*.log
+**/.idea/
+**/.vscode/

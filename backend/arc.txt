@@ -1,0 +1,43 @@
+backend/
+├── manage.py
+├── requirements.txt
+├── .env
+├── docker-compose.yml
+├── Dockerfile
+├── project/
+│   ├── __init__.py
+│   ├── settings.py
+│   ├── urls.py
+│   ├── wsgi.py
+│   ├── asgi.py
+│   └── celery.py
+├── apps/
+│   ├── users/
+│   │   ├── models.py
+│   │   ├── serializers.py
+│   │   ├── views.py
+│   │   └── urls.py
+│   ├── documents/
+│   │   ├── models.py
+│   │   ├── serializers.py
+│   │   ├── views.py
+│   │   ├── tasks.py
+│   │   ├── utils.py
+│   │   ├── storage.py
+│   │   └── urls.py
+│   ├── embeddings/
+│   │   └── encoder.py
+│   ├── vectorstore/
+│   │   └── faiss_client.py
+│   └── rag/
+│       ├── retriever.py
+│       ├── prompt_builder.py
+│       ├── llm.py
+│       ├── views.py
+│       ├── serializers.py
+│       └── urls.py
+├── data/
+│   ├── faiss_index.bin
+│   └── id_map.json
+└── scripts/
+    └── seed.py
