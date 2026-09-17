@@ -15,8 +15,11 @@ from rest_framework.throttling import UserRateThrottle
 from .retriever import retrieve
 from .prompt_builder import build_prompt
 from .llm import generate, generate_stream
-from .models import QueryLog, PromptTemplate
-from .serializers import AskSerializer, ProposalSerializer
+from .models import QueryLog, PromptTemplate, Proposal
+from .serializers import (
+    AskSerializer, ProposalSerializer,
+    SavedProposalSerializer, ProposalCreateSerializer, ProposalStatusSerializer,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +36,6 @@ PROMPT_PREVIEW_CHARS = 500
 def _source_public(chunk):
     text = chunk.get("text", "") or ""
     snippet = text[:SNIPPET_CHARS] + ("…" if len(text) > SNIPPET_CHARS else "")
-
     payload = {
         "chunk_id": chunk["chunk_id"],
         "document_id": chunk["document_id"],
@@ -41,10 +43,8 @@ def _source_public(chunk):
         "page": chunk.get("page"),
         "snippet": snippet,
     }
-
     if settings.DEBUG and "score" in chunk:
         payload["score"] = round(float(chunk["score"]), 4)
-
     return payload
 
 
@@ -306,10 +306,7 @@ class RAGAskStreamView(APIView):
             parts = []
 
             try:
-                yield _sse("sources", {
-                    "sources": sources_payload,
-                    "gated": gated,
-                })
+                yield _sse("sources", {"sources": sources_payload, "gated": gated})
 
                 if gated:
                     for word in canned.split(" "):
@@ -357,7 +354,7 @@ class RAGAskStreamView(APIView):
                         user=user, business=business,
                         question=question,
                         retrieved_chunks=[c["chunk_id"] for c in chunks],
-                        response_text="".join(parts).strip() + " [partial — client disconnected]",
+                        response_text="".join(parts).strip() + " [partial]",
                         prompt_used=prompt, model=model_name,
                         confidence=None,
                         latency_ms=int((time.time() - t0) * 1000),
@@ -480,3 +477,107 @@ class GenerateProposalStreamView(APIView):
         response["Cache-Control"] = "no-cache, no-store"
         response["X-Accel-Buffering"] = "no"
         return response
+
+
+# ============================================================
+# Saved Proposals CRUD
+# ============================================================
+
+class ProposalListCreateView(APIView):
+    """GET /api/rag/proposals/  — list. POST — create."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        business = getattr(request.user, "business", None)
+        if business is None:
+            return Response([])
+
+        qs = Proposal.objects.filter(business=business)
+
+        status_filter = request.query_params.get("status")
+        if status_filter:
+            qs = qs.filter(status=status_filter)
+
+        q = request.query_params.get("q", "").strip()
+        if q:
+            qs = qs.filter(client_name__icontains=q)
+
+        qs = qs[:200]
+        return Response(SavedProposalSerializer(qs, many=True).data)
+
+    def post(self, request):
+        business = getattr(request.user, "business", None)
+        if business is None:
+            return Response(
+                {"detail": "User has no business."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        ser = ProposalCreateSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        data = ser.validated_data
+
+        proposal = Proposal.objects.create(
+            business=business,
+            created_by=request.user,
+            client_name=data["client_name"],
+            client_info=data["client_info"],
+            draft_text=data["draft_text"],
+            sources=data["sources"],
+            notes=data.get("notes", ""),
+            status="draft",
+        )
+        return Response(
+            SavedProposalSerializer(proposal).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class ProposalDetailView(APIView):
+    """GET / PATCH / DELETE /api/rag/proposals/{id}/"""
+    permission_classes = [IsAuthenticated]
+
+    def _get(self, request, pk):
+        business = getattr(request.user, "business", None)
+        if business is None:
+            return None
+        return Proposal.objects.filter(pk=pk, business=business).first()
+
+    def get(self, request, pk):
+        obj = self._get(request, pk)
+        if not obj:
+            return Response({"detail": "Not found."}, status=404)
+        return Response(SavedProposalSerializer(obj).data)
+
+    def patch(self, request, pk):
+        obj = self._get(request, pk)
+        if not obj:
+            return Response({"detail": "Not found."}, status=404)
+        ser = SavedProposalSerializer(obj, data=request.data, partial=True)
+        ser.is_valid(raise_exception=True)
+        ser.save()
+        return Response(ser.data)
+
+    def delete(self, request, pk):
+        obj = self._get(request, pk)
+        if not obj:
+            return Response({"detail": "Not found."}, status=404)
+        obj.delete()
+        return Response(status=204)
+
+
+class ProposalStatusView(APIView):
+    """POST /api/rag/proposals/{id}/status/"""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        business = getattr(request.user, "business", None)
+        obj = Proposal.objects.filter(pk=pk, business=business).first()
+        if not obj:
+            return Response({"detail": "Not found."}, status=404)
+
+        ser = ProposalStatusSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        obj.status = ser.validated_data["status"]
+        obj.save(update_fields=["status", "updated_at"])
+        return Response(SavedProposalSerializer(obj).data)
